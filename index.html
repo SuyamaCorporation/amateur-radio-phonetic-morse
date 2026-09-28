@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アマチュア無線 フォネティック・モールスコードトレーナー</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+<script>
+function escapeHtml(str){return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+</script>
+
+<div class="max-w-5xl mx-auto p-4">
+  <h1 class="text-2xl font-bold text-indigo-400 mb-1">アマチュア無線 フォネティック・モールスコードトレーナー</h1>
+  <p class="text-gray-400 text-sm mb-4">NATO・JSARLフォネティックコード + モールス信号 練習 — 4アマ・3アマ試験対策</p>
+
+  <!-- Tab nav -->
+  <div class="flex gap-2 mb-4">
+    <button onclick="switchTab('phonetic')" id="tab-phonetic" class="px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white">フォネティック</button>
+    <button onclick="switchTab('morse')" id="tab-morse" class="px-4 py-2 rounded-lg text-sm font-semibold bg-gray-700 text-gray-300">モールス</button>
+    <button onclick="switchTab('quiz')" id="tab-quiz" class="px-4 py-2 rounded-lg text-sm font-semibold bg-gray-700 text-gray-300">クイズ練習</button>
+    <button onclick="switchTab('callsign')" id="tab-callsign" class="px-4 py-2 rounded-lg text-sm font-semibold bg-gray-700 text-gray-300">コールサイン</button>
+  </div>
+
+  <!-- Phonetic tab -->
+  <div id="pane-phonetic">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4" id="phoneticGrid"></div>
+    <div class="bg-gray-800 rounded-xl p-4">
+      <h3 class="text-sm font-semibold text-violet-300 mb-2">JSARL（日本）フォネティックコード</h3>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2" id="jsarlGrid"></div>
+    </div>
+  </div>
+
+  <!-- Morse tab -->
+  <div id="pane-morse" class="hidden">
+    <div class="mb-4 flex flex-wrap gap-3 items-center">
+      <label class="text-sm text-gray-400">速度:</label>
+      <input type="range" id="morseSpeed" min="5" max="30" value="12" class="w-32 accent-indigo-500">
+      <span id="morseSpeedVal" class="text-indigo-300 text-sm">12 WPM</span>
+      <button id="morsePlayBtn" class="px-4 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-sm">▶ 再生</button>
+      <button id="morseStopBtn" class="px-4 py-1 bg-gray-700 hover:bg-gray-600 rounded text-sm">■ 停止</button>
+    </div>
+    <div class="mb-3">
+      <textarea id="morseInput" class="w-full bg-gray-800 border border-gray-600 rounded-lg p-3 text-lg font-mono text-white h-16 resize-none" placeholder="テキストを入力してモールスに変換...">CQ CQ DE JA1XXX</textarea>
+    </div>
+    <div id="morseOutput" class="bg-gray-800 rounded-xl p-4 font-mono text-cyan-400 text-lg tracking-widest min-h-16 break-all"></div>
+    <div class="mt-4 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2" id="morseTable"></div>
+  </div>
+
+  <!-- Quiz tab -->
+  <div id="pane-quiz" class="hidden">
+    <div class="bg-gray-800 rounded-xl p-4 mb-4">
+      <div class="flex gap-4 mb-3">
+        <select id="quizType" class="bg-gray-700 border border-gray-600 rounded px-3 py-1 text-sm">
+          <option value="morse2char">モールス → 文字</option>
+          <option value="char2morse">文字 → モールス</option>
+          <option value="phonetic">フォネティック → 文字</option>
+        </select>
+        <button onclick="startQuiz()" class="px-4 py-1 bg-indigo-600 hover:bg-indigo-500 rounded text-sm">スタート</button>
+        <span class="text-sm text-gray-400 ml-auto">正答率: <span id="quizScore" class="text-yellow-300 font-bold">-</span></span>
+      </div>
+      <div id="quizQuestion" class="text-center py-6">
+        <p class="text-gray-500">スタートボタンを押してください</p>
+      </div>
+      <div id="quizChoices" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+      <div id="quizFeedback" class="mt-3 text-center text-sm h-5"></div>
+    </div>
+    <div class="bg-gray-800 rounded-xl p-3">
+      <h3 class="text-sm font-semibold text-gray-400 mb-2">成績履歴（直近10問）</h3>
+      <div id="historyBar" class="flex gap-1"></div>
+    </div>
+  </div>
+
+  <!-- Callsign tab -->
+  <div id="pane-callsign" class="hidden">
+    <div class="bg-gray-800 rounded-xl p-4 mb-4">
+      <h3 class="text-violet-300 font-semibold mb-3">コールサイン フォネティック変換</h3>
+      <div class="flex gap-2 mb-3">
+        <input type="text" id="callsignInput" placeholder="例: JA1ABC" class="flex-1 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 uppercase font-mono text-lg" maxlength="12">
+        <button onclick="genCallsign()" class="px-4 py-2 bg-violet-600 hover:bg-violet-500 rounded-lg text-sm">変換</button>
+        <button onclick="randomCallsign()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-sm">ランダム</button>
+      </div>
+      <div id="callsignResult" class="space-y-2"></div>
+    </div>
+    <div class="bg-gray-800 rounded-xl p-4">
+      <h3 class="text-sm font-semibold text-indigo-300 mb-2">日本のコールサイン規則</h3>
+      <ul class="text-sm text-gray-400 space-y-1">
+        <li>• <span class="text-yellow-300">JA</span>: 1アマ・2アマ (JA1〜JA9, JA0)</li>
+        <li>• <span class="text-green-300">JH〜JS</span>: 3アマ・4アマ</li>
+        <li>• <span class="text-cyan-300">7J〜7N</span>: 4アマ (7J1〜7N4)</li>
+        <li>• エリア番号 1=関東, 2=東海, 3=近畿, 4=中国, 5=四国, 6=九州, 7=東北, 8=北海道, 9=北陸, 0=信越</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+function escapeHtml(str){return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+
+const NATO = {
+  A:'Alpha', B:'Bravo', C:'Charlie', D:'Delta', E:'Echo', F:'Foxtrot',
+  G:'Golf', H:'Hotel', I:'India', J:'Juliet', K:'Kilo', L:'Lima',
+  M:'Mike', N:'November', O:'Oscar', P:'Papa', Q:'Quebec', R:'Romeo',
+  S:'Sierra', T:'Tango', U:'Uniform', V:'Victor', W:'Whiskey',
+  X:'X-ray', Y:'Yankee', Z:'Zulu',
+  '0':'Zero','1':'One','2':'Two','3':'Three','4':'Four',
+  '5':'Five','6':'Six','7':'Seven','8':'Eight','9':'Nine'
+};
+
+const JSARL = {
+  A:'アメリカ', B:'ビクター', C:'カナダ', D:'デルタ', E:'エコー', F:'フォックストロット',
+  G:'ゴルフ', H:'ホテル', I:'インディア', J:'ジュリエット', K:'キロ', L:'リマ',
+  M:'マイク', N:'ノベンバー', O:'オスカー', P:'パパ', Q:'ケベック', R:'ロミオ',
+  S:'シエラ', T:'タンゴ', U:'ユニフォーム', V:'ビクター', W:'ウイスキー',
+  X:'エックスレイ', Y:'ヤンキー', Z:'ズールー'
+};
+
+const MORSE = {
+  A:'.-', B:'-...', C:'-.-.', D:'-..', E:'.', F:'..-.', G:'--.', H:'....',
+  I:'..', J:'.---', K:'-.-', L:'.-..', M:'--', N:'-.', O:'---', P:'.--.',
+  Q:'--.-', R:'.-.', S:'...', T:'-', U:'..-', V:'...-', W:'.--', X:'-..-',
+  Y:'-.--', Z:'--..',
+  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-',
+  '5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',
+  '.':'.-.-.-',',':'--..--','?':'..--..','!':'-.-.--','/':'-..-.',
+  ' ': '/'
+};
+
+const MORSE_REVERSE = {};
+for (const [k, v] of Object.entries(MORSE)) { if (k !== ' ') MORSE_REVERSE[v] = k; }
+
+// Build phonetic grid
+function buildPhoneticGrid() {
+  const grid = document.getElementById('phoneticGrid');
+  for (const [letter, word] of Object.entries(NATO)) {
+    if (isNaN(letter)) {
+      const div = document.createElement('div');
+      div.className = 'bg-gray-800 rounded-lg p-2 text-center cursor-pointer hover:bg-indigo-800 transition';
+      div.innerHTML = `<div class="text-xl font-bold text-indigo-300">${escapeHtml(letter)}</div><div class="text-xs text-gray-300">${escapeHtml(word)}</div><div class="text-xs text-cyan-400 font-mono mt-1">${escapeHtml(MORSE[letter] || '')}</div>`;
+      div.addEventListener('click', () => playMorse(MORSE[letter] || ''));
+      grid.appendChild(div);
+    }
+  }
+
+  const jsGrid = document.getElementById('jsarlGrid');
+  for (const [letter, word] of Object.entries(JSARL)) {
+    const div = document.createElement('div');
+    div.className = 'bg-gray-700 rounded-lg p-2 text-center text-xs';
+    div.innerHTML = `<span class="font-bold text-violet-300">${escapeHtml(letter)}</span> <span class="text-gray-300">${escapeHtml(word)}</span>`;
+    jsGrid.appendChild(div);
+  }
+}
+
+// Build morse table
+function buildMorseTable() {
+  const table = document.getElementById('morseTable');
+  for (const [ch, code] of Object.entries(MORSE)) {
+    if (ch === ' ') continue;
+    const div = document.createElement('div');
+    div.className = 'bg-gray-800 rounded p-1 text-center text-xs cursor-pointer hover:bg-cyan-900 transition';
+    div.innerHTML = `<div class="font-bold text-white">${escapeHtml(ch)}</div><div class="font-mono text-cyan-400">${escapeHtml(code)}</div>`;
+    div.addEventListener('click', () => playMorse(code));
+    table.appendChild(div);
+  }
+}
+
+// Morse output
+document.getElementById('morseInput').addEventListener('input', updateMorseOutput);
+function updateMorseOutput() {
+  const text = document.getElementById('morseInput').value.toUpperCase();
+  const out = text.split('').map(c => MORSE[c] || '?').join('  ');
+  document.getElementById('morseOutput').textContent = out;
+}
+
+// Web Audio morse player
+let audioCtx = null;
+let morseNodes = [];
+let morsePlaying = false;
+
+function getMorseWpm() {
+  return parseInt(document.getElementById('morseSpeed').value);
+}
+
+function playMorse(code) {
+  if (!audioCtx) audioCtx = new AudioContext();
+  const wpm = getMorseWpm();
+  const dotDuration = 1.2 / wpm;
+  let t = audioCtx.currentTime + 0.05;
+
+  for (const sym of code) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = 700;
+    osc.type = 'sine';
+
+    if (sym === '.') {
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.setValueAtTime(0, t + dotDuration);
+      osc.start(t);
+      osc.stop(t + dotDuration);
+      t += dotDuration * 2;
+    } else if (sym === '-') {
+      gain.gain.setValueAtTime(0.3, t);
+      gain.gain.setValueAtTime(0, t + dotDuration * 3);
+      osc.start(t);
+      osc.stop(t + dotDuration * 3);
+      t += dotDuration * 4;
+    } else if (sym === '/') {
+      t += dotDuration * 7;
+    }
+  }
+}
+
+document.getElementById('morseSpeed').addEventListener('input', function() {
+  document.getElementById('morseSpeedVal').textContent = this.value + ' WPM';
+});
+
+document.getElementById('morsePlayBtn').addEventListener('click', () => {
+  const text = document.getElementById('morseInput').value.toUpperCase();
+  const code = text.split('').map(c => MORSE[c] || '').join('   ');
+  playMorse(code);
+});
+
+document.getElementById('morseStopBtn').addEventListener('click', () => {
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+});
+
+// Quiz
+let quizCorrect = 0, quizTotal = 0, quizHistory = [];
+let currentQuiz = null;
+
+function startQuiz() {
+  nextQuizQuestion();
+}
+
+function nextQuizQuestion() {
+  const type = document.getElementById('quizType').value;
+  const letters = Object.keys(MORSE).filter(k => k !== ' ' && isNaN(parseInt(k)));
+  const ch = letters[Math.floor(Math.random() * letters.length)];
+  const code = MORSE[ch];
+
+  currentQuiz = { type, ch, code };
+  const qDiv = document.getElementById('quizQuestion');
+  const choicesDiv = document.getElementById('quizChoices');
+  document.getElementById('quizFeedback').textContent = '';
+
+  if (type === 'morse2char') {
+    qDiv.innerHTML = `<p class="text-gray-400 text-sm mb-2">このモールス符号の文字は？</p><p class="text-4xl font-mono text-cyan-400 tracking-widest">${escapeHtml(code)}</p>`;
+    const choices = [ch];
+    while (choices.length < 4) {
+      const r = letters[Math.floor(Math.random() * letters.length)];
+      if (!choices.includes(r)) choices.push(r);
+    }
+    choices.sort(() => Math.random() - 0.5);
+    choicesDiv.innerHTML = choices.map(c =>
+      `<button onclick="checkQuiz('${escapeHtml(c)}')" class="py-3 bg-gray-700 hover:bg-indigo-700 rounded-lg text-xl font-bold transition">${escapeHtml(c)}</button>`
+    ).join('');
+  } else if (type === 'char2morse') {
+    qDiv.innerHTML = `<p class="text-gray-400 text-sm mb-2">この文字のモールス符号は？</p><p class="text-5xl font-bold text-yellow-300">${escapeHtml(ch)}</p>`;
+    const allCodes = Object.values(MORSE).filter(v => v !== '/');
+    const choices = [code];
+    while (choices.length < 4) {
+      const r = allCodes[Math.floor(Math.random() * allCodes.length)];
+      if (!choices.includes(r)) choices.push(r);
+    }
+    choices.sort(() => Math.random() - 0.5);
+    choicesDiv.innerHTML = choices.map(c =>
+      `<button onclick="checkQuiz('${escapeHtml(c)}')" class="py-2 bg-gray-700 hover:bg-indigo-700 rounded-lg font-mono text-cyan-400 text-sm transition">${escapeHtml(c)}</button>`
+    ).join('');
+  } else {
+    const natoWord = NATO[ch] || ch;
+    qDiv.innerHTML = `<p class="text-gray-400 text-sm mb-2">このフォネティックコードの文字は？</p><p class="text-3xl font-bold text-violet-300">${escapeHtml(natoWord)}</p>`;
+    const choices = [ch];
+    while (choices.length < 4) {
+      const r = letters[Math.floor(Math.random() * letters.length)];
+      if (!choices.includes(r)) choices.push(r);
+    }
+    choices.sort(() => Math.random() - 0.5);
+    choicesDiv.innerHTML = choices.map(c =>
+      `<button onclick="checkQuiz('${escapeHtml(c)}')" class="py-3 bg-gray-700 hover:bg-indigo-700 rounded-lg text-xl font-bold transition">${escapeHtml(c)}</button>`
+    ).join('');
+  }
+}
+
+function checkQuiz(answer) {
+  const q = currentQuiz;
+  let correct = false;
+  if (q.type === 'morse2char' || q.type === 'phonetic') correct = answer === q.ch;
+  else correct = answer === q.code;
+
+  quizTotal++;
+  if (correct) quizCorrect++;
+  quizHistory.push(correct);
+  if (quizHistory.length > 10) quizHistory.shift();
+
+  const fb = document.getElementById('quizFeedback');
+  fb.textContent = correct ? '✓ 正解！' : `✗ 不正解 — 正解: ${q.ch} (${q.code})`;
+  fb.className = 'mt-3 text-center text-sm h-5 ' + (correct ? 'text-green-400' : 'text-red-400');
+  document.getElementById('quizScore').textContent = quizTotal > 0 ? Math.round(quizCorrect/quizTotal*100) + '%' : '-';
+
+  const bar = document.getElementById('historyBar');
+  bar.innerHTML = quizHistory.map(h =>
+    `<span class="w-6 h-6 rounded ${h ? 'bg-green-500' : 'bg-red-500'} inline-block"></span>`
+  ).join('');
+
+  setTimeout(nextQuizQuestion, 1200);
+}
+
+// Callsign
+function genCallsign() {
+  const cs = document.getElementById('callsignInput').value.toUpperCase().trim();
+  showCallsign(cs);
+}
+
+function randomCallsign() {
+  const prefixes = ['JA1', 'JA2', 'JA3', 'JH1', 'JH4', '7K1'];
+  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+  const suffix = Array.from({length: 3}, () => 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)]).join('');
+  const cs = prefix + suffix;
+  document.getElementById('callsignInput').value = cs;
+  showCallsign(cs);
+}
+
+function showCallsign(cs) {
+  const result = document.getElementById('callsignResult');
+  if (!cs) { result.innerHTML = ''; return; }
+  const natoLine = cs.split('').map(c => `<span class="inline-block bg-indigo-900 rounded px-2 py-1 mx-1 text-center"><span class="block text-xl font-bold text-white">${escapeHtml(c)}</span><span class="block text-xs text-indigo-300">${escapeHtml(NATO[c] || c)}</span><span class="block text-xs font-mono text-cyan-400">${escapeHtml(MORSE[c] || '')}</span></span>`).join('');
+  result.innerHTML = `
+    <div class="mb-2"><span class="text-gray-400 text-sm">コールサイン:</span> <span class="text-2xl font-mono font-bold text-yellow-300">${escapeHtml(cs)}</span></div>
+    <div class="flex flex-wrap gap-1 mb-2">${natoLine}</div>
+    <div class="text-sm font-mono text-cyan-400 bg-gray-900 rounded p-2">${escapeHtml(cs.split('').map(c => MORSE[c] || '').join('   '))}</div>
+  `;
+}
+
+// Tab switching
+function switchTab(name) {
+  ['phonetic','morse','quiz','callsign'].forEach(t => {
+    document.getElementById('pane-' + t).classList.toggle('hidden', t !== name);
+    const btn = document.getElementById('tab-' + t);
+    if (btn) {
+      btn.className = t === name
+        ? 'px-4 py-2 rounded-lg text-sm font-semibold bg-indigo-600 text-white'
+        : 'px-4 py-2 rounded-lg text-sm font-semibold bg-gray-700 text-gray-300';
+    }
+  });
+}
+
+buildPhoneticGrid();
+buildMorseTable();
+updateMorseOutput();
+</script>
+</body>
+</html>
